@@ -1,0 +1,35 @@
+# Guest kernel configuration for QEMU's aarch64 'virt' machine.
+# Applied on top of `make defconfig` by scripts/build-kernel.sh.
+#
+# KVM is off: 4.1's arm64 KVM assembly uses teecr32_el1/teehbr32_el1, which
+# current binutils no longer accepts, and a TCG guest does not need nested KVM.
+# CONFIG_DEBUG_INFO is off to keep the Image small and the build fast.
+# CONFIG_DEBUG_INFO=n
+# CONFIG_KVM is not set
+CONFIG_DRM=y
+CONFIG_DRM_BOCHS=y
+CONFIG_DRM_KMS_FB_HELPER=y
+CONFIG_FB=y
+CONFIG_FRAMEBUFFER_CONSOLE=y
+CONFIG_FRAMEBUFFER_CONSOLE_ROTATION=y
+CONFIG_INPUT_EVDEV=y
+CONFIG_VIRTIO_INPUT=y
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_MMIO=y
+CONFIG_VIRTIO_BLK=y
+CONFIG_VIRTIO_NET=y
+CONFIG_VIRTIO_CONSOLE=y
+CONFIG_PCI=y
+CONFIG_PCI_HOST_GENERIC=y
+CONFIG_SERIAL_AMBA_PL011=y
+CONFIG_SERIAL_AMBA_PL011_CONSOLE=y
+CONFIG_ZRAM=y
+CONFIG_ZSMALLOC=y
+CONFIG_SWAP=y
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+CONFIG_TMPFS=y
+CONFIG_EXT4_FS=y
+CONFIG_9P_FS=y
+CONFIG_NET_9P=y
+CONFIG_NET_9P_VIRTIO=y

@@ -1,0 +1,25 @@
+From c9903e04fbdd8ce13b602dd8b0de9e5b62259857 Mon Sep 17 00:00:00 2001
+From: p <p@p>
+Date: Mon, 23 Nov 2026 13:58:59 +0000
+Subject: [PATCH 1/4] kbuild: build host tools with -fcommon
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 1f55602..9cb5234 100644
+--- a/Makefile
++++ b/Makefile
+@@ -298,7 +298,7 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
+ 
+ HOSTCC       = gcc
+ HOSTCXX      = g++
+-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
++HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89 -fcommon
+ HOSTCXXFLAGS = -O2
+ 
+ ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
+-- 
+2.56.1
+

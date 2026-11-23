@@ -1,0 +1,25 @@
+From 6dc78eb4bfc67e642169d32b3d8a60cae7352e6d Mon Sep 17 00:00:00 2001
+From: p <p@p>
+Date: Mon, 23 Nov 2026 13:58:59 +0000
+Subject: [PATCH 2/4] arm64: use a valid section flag spelling in proc.S
+
+---
+ arch/arm64/mm/proc.S | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/mm/proc.S b/arch/arm64/mm/proc.S
+index 262c8ec..7ea2ed3 100644
+--- a/arch/arm64/mm/proc.S
++++ b/arch/arm64/mm/proc.S
+@@ -188,7 +188,7 @@ ENTRY(cpu_do_switch_mm)
+ 	ret
+ ENDPROC(cpu_do_switch_mm)
+ 
+-	.section ".text.init", #alloc, #execinstr
++	.section ".text.init", "ax"
+ 
+ /*
+  *	__cpu_setup
+-- 
+2.56.1
+

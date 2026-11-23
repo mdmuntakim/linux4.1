@@ -1,0 +1,61 @@
+#!/bin/busybox sh
+# PID 1 of the Linux 4.1.52 guest.
+#
+# It brings up the pseudo filesystems, a small zram swap, prints the kernel
+# release (the CI boot test asserts it starts with 4.1) and then either opens
+# the framebuffer desktop or runs the benchmark for a fixed number of seconds.
+#
+# Kernel command line options:
+#   linux4.1.mode=desktop|bench   (default: desktop)
+#   linux4.1.seconds=N            (bench length, default 10)
+set -e
+
+/bin/busybox --install -s /bin 2>/dev/null || true
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+mkdir -p /dev/pts /tmp /run
+mount -t devpts devpts /dev/pts 2>/dev/null || true
+mount -t tmpfs tmpfs /tmp
+mount -t tmpfs tmpfs /run
+
+hostname linux4.1 2>/dev/null || true
+
+# zram swap: 128 MiB of compressed swap, no disk, no root.
+if [ -e /sys/block/zram0/disksize ]; then
+    echo 134217728 > /sys/block/zram0/disksize 2>/dev/null || true
+    mkswap /dev/zram0 >/dev/null 2>&1 && swapon /dev/zram0 2>/dev/null && \
+        echo "linux4.1: zram swap enabled" >/dev/console || true
+fi
+
+exec >/dev/console 2>&1
+
+MODE=desktop
+SECONDS_BENCH=10
+for arg in $(cat /proc/cmdline); do
+    case "$arg" in
+        linux4.1.mode=*) MODE=${arg#linux4.1.mode=} ;;
+        linux4.1.seconds=*) SECONDS_BENCH=${arg#linux4.1.seconds=} ;;
+    esac
+done
+
+echo "LINUX4.1_BOOT_OK $(uname -r)"
+echo "linux4.1: $(uname -srm), mode=$MODE, cpu=$(grep -c ^processor /proc/cpuinfo)"
+
+if [ -c /dev/fb0 ]; then
+    echo "linux4.1: framebuffer $(cat /sys/class/graphics/fb0/virtual_size 2>/dev/null)"
+else
+    echo "linux4.1: no /dev/fb0 (bochs DRM did not bind)"
+fi
+
+set +e
+if [ "$MODE" = "bench" ]; then
+    /bin/fbdesk --mode bench --seconds "$SECONDS_BENCH"
+    echo "LINUX4.1_BENCH_DONE"
+    poweroff -f
+else
+    /bin/fbdesk --mode desktop &
+    exec /bin/sh
+fi

@@ -1,0 +1,25 @@
+From 1e86755bb19cecbe7d72f557ffa6d132a9e2c09b Mon Sep 17 00:00:00 2001
+From: p <p@p>
+Date: Mon, 23 Nov 2026 13:58:59 +0000
+Subject: [PATCH 4/4] x86/boot: build the decompressor as gnu89
+
+---
+ arch/x86/boot/compressed/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/x86/boot/compressed/Makefile b/arch/x86/boot/compressed/Makefile
+index 0a291cd..6c5773b 100644
+--- a/arch/x86/boot/compressed/Makefile
++++ b/arch/x86/boot/compressed/Makefile
+@@ -27,7 +27,7 @@ KBUILD_CFLAGS += -DDISABLE_BRANCH_PROFILING
+ cflags-$(CONFIG_X86_32) := -march=i386
+ cflags-$(CONFIG_X86_64) := -mcmodel=small
+ KBUILD_CFLAGS += $(cflags-y)
+-KBUILD_CFLAGS += -mno-mmx -mno-sse
++KBUILD_CFLAGS += -mno-mmx -mno-sse -std=gnu89
+ KBUILD_CFLAGS += $(call cc-option,-ffreestanding)
+ KBUILD_CFLAGS += $(call cc-option,-fno-stack-protector)
+ 
+-- 
+2.56.1
+

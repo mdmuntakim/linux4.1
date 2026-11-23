@@ -1,0 +1,24 @@
+# Build output, object files and downloaded sources are never committed.
+out/
+build/
+dl/
+fbdesk
+*.o
+*.ko
+*.mod
+*.mod.c
+*.cmd
+.tmp_*
+.tmp_versions
+.tmp_vmlinux*
+.tmp_kallsyms*
+.tmp_System.map
+.vmlinux*
+*.img
+*.cpio
+*.cpio.gz
+*.tar.xz
+*.tar.gz
+*.tar.bz2
+*.dmg
+*.zip

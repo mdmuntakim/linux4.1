@@ -1,0 +1,41 @@
+From: Linux4.1 <linux41@example.invalid>
+Subject: [PATCH] libfdt: make sep const so GCC 15 accepts it
+
+QEMU 9.2.3 bundles a device-tree compiler from 2023.  Its fdt_overlay.c
+assigns memchr() to a char * and is built with -Wcast-qual -Werror, which
+GCC 15 rejects.  The pointer only ever points into const strings, so make it
+const instead of casting the qualifier away.
+
+--- a/subprojects/dtc/libfdt/fdt_overlay.c
++++ b/subprojects/dtc/libfdt/fdt_overlay.c
+@@ -448,7 +448,8 @@
+ 		const char *fixup_str = value;
+ 		uint32_t path_len, name_len;
+ 		uint32_t fixup_len;
+-		char *sep, *endptr;
++		const char *sep;
++		char *endptr;
+ 		int poffset, ret;
+ 
+ 		fixup_end = memchr(value, '\0', len);
+@@ -458,13 +459,13 @@
+ 		value += fixup_len + 1;
+ 
+ 		path = fixup_str;
+-		sep = memchr(fixup_str, ':', fixup_len);
++		sep = memchr(fixup_str, ':', fixup_len);
+ 		if (!sep || *sep != ':')
+ 			return -FDT_ERR_BADOVERLAY;
+ 
+ 		path_len = sep - path;
+ 		if (path_len == (fixup_len - 1))
+ 			return -FDT_ERR_BADOVERLAY;
+ 
+ 		fixup_len -= path_len + 1;
+ 		name = sep + 1;
+-		sep = memchr(name, ':', fixup_len);
++		sep = memchr(name, ':', fixup_len);
+ 		if (!sep || *sep != ':')
+ 			return -FDT_ERR_BADOVERLAY;
+ 
+ 		name_len = sep - name;

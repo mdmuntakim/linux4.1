@@ -1,0 +1,27 @@
+From 9e84f51cc3c00e6b509257eace0b872820973275 Mon Sep 17 00:00:00 2001
+From: p <p@p>
+Date: Mon, 23 Nov 2026 13:58:59 +0000
+Subject: [PATCH 3/4] x86: build realmode code as gnu89 (GCC 15 defaults to
+ C23)
+
+---
+ arch/x86/Makefile | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/x86/Makefile b/arch/x86/Makefile
+index 696c82f..f78c808 100644
+--- a/arch/x86/Makefile
++++ b/arch/x86/Makefile
+@@ -27,7 +27,8 @@ REALMODE_CFLAGS	:= $(M16_CFLAGS) -g -Os -D__KERNEL__ \
+ 		   -mno-mmx -mno-sse \
+ 		   $(call cc-option, -ffreestanding) \
+ 		   $(call cc-option, -fno-stack-protector) \
+-		   $(call cc-option, -mpreferred-stack-boundary=2)
++		   $(call cc-option, -mpreferred-stack-boundary=2) \
++		   -std=gnu89
+ export REALMODE_CFLAGS
+ 
+ # BITS is used as extension for files which are available in a 32 bit
+-- 
+2.56.1
+
