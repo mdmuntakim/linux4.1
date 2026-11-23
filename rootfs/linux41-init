@@ -1,0 +1,42 @@
+#!/bin/sh
+# Linux4.1 guest early init.  Runs from /etc/inittab ::sysinit:.
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+export HOME=/root
+
+mount -t proc     proc     /proc     2>/dev/null
+mount -t sysfs    sysfs    /sys      2>/dev/null
+mount -t devtmpfs devtmpfs /dev      2>/dev/null
+mkdir -p /dev/pts /run /data /tmp
+mount -t devpts   devpts   /dev/pts  2>/dev/null
+mount -t tmpfs    tmpfs    /tmp      2>/dev/null
+
+hostname linux41
+echo linux41 > /etc/hostname
+
+# Persistent data disk (virtio-blk /dev/vdb).  The app creates a sparse image
+# of the configured size; the guest formats it on the first boot and then
+# keeps it across app restarts.
+if [ -b /dev/vdb ]; then
+  if ! blkid /dev/vdb >/dev/null 2>&1; then
+    echo "linux41: formatting data disk /dev/vdb" >/dev/tty1
+    mkfs.ext4 -q -F -L linux41-data /dev/vdb >/dev/null 2>&1
+  fi
+  mount -t ext4 /dev/vdb /data 2>/dev/null || echo "linux41: data disk mount failed" >/dev/tty1
+fi
+
+# User state on the data disk, so a new rootfs keeps the home directory.
+if [ -d /data/home ] && [ ! -e /root/.linux41-linked ]; then
+  cp -a /root/. /data/home/ 2>/dev/null
+  rm -rf /root
+  ln -s /data/home /root
+  : > /root/.linux41-linked
+fi
+
+ip link set lo up 2>/dev/null
+if [ -e /sys/class/net/eth0 ]; then
+  ip link set eth0 up 2>/dev/null
+  udhcpc -i eth0 -b -q -t 8 -T 2 >/dev/null 2>&1 &
+fi
+
+cat /etc/motd > /dev/tty1 2>/dev/null
+exit 0

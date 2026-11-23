@@ -1,0 +1,78 @@
+# Linux4.1 guest kernel configuration fragment.
+# Applied on top of the upstream x86_64 defconfig of Linux 4.1.52.
+# The guest is an x86_64 QEMU machine with virtio disk/net and a stdvga console.
+
+CONFIG_64BIT=y
+CONFIG_SMP=y
+CONFIG_NR_CPUS=8
+CONFIG_HZ_250=y
+CONFIG_PREEMPT_VOLUNTARY=y
+
+# Built-in only: the guest never loads a module.
+CONFIG_MODULES=n
+
+# Storage
+CONFIG_BLK_DEV=y
+CONFIG_EXT4_FS=y
+CONFIG_EXT4_USE_FOR_EXT2=y
+CONFIG_EXT4_FS_POSIX_ACL=y
+CONFIG_TMPFS=y
+CONFIG_TMPFS_POSIX_ACL=y
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+CONFIG_PROC_FS=y
+CONFIG_SYSFS=y
+CONFIG_PCI=y
+CONFIG_VIRTIO=y
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_BLK=y
+CONFIG_VIRTIO_NET=y
+CONFIG_VIRTIO_CONSOLE=y
+CONFIG_SCSI_VIRTIO=y
+
+# Networking (user-mode SLIRP on the host side)
+CONFIG_NET=y
+CONFIG_INET=y
+CONFIG_UNIX=y
+CONFIG_PACKET=y
+CONFIG_NETFILTER=y
+
+# Console / display
+CONFIG_TTY=y
+CONFIG_VT=y
+CONFIG_VT_CONSOLE=y
+CONFIG_VGA_CONSOLE=y
+CONFIG_FB=y
+CONFIG_FB_VESA=y
+CONFIG_FRAMEBUFFER_CONSOLE=y
+CONFIG_FONT_8x16=y
+CONFIG_DRM=y
+CONFIG_DRM_BOCHS=y
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y
+CONFIG_INPUT=y
+CONFIG_INPUT_KEYBOARD=y
+CONFIG_INPUT_MOUSE=y
+CONFIG_INPUT_EVDEV=y
+CONFIG_HID_GENERIC=y
+
+# Runtime bits a musl userspace expects
+CONFIG_BINFMT_ELF=y
+CONFIG_BINFMT_SCRIPT=y
+CONFIG_FUTEX=y
+CONFIG_EPOLL=y
+CONFIG_SIGNALFD=y
+CONFIG_TIMERFD=y
+CONFIG_EVENTFD=y
+CONFIG_SHMEM=y
+CONFIG_AIO=y
+CONFIG_UNIX98_PTYS=y
+CONFIG_RTC_CLASS=y
+CONFIG_RTC_DRV_CMOS=y
+
+# Keep the build compatible with a modern host toolchain.
+# objtool of 4.1 does not know the modern binutils, and GCC >= 10 defaults to
+# -fno-common which breaks several 4.1 translation units.
+CONFIG_STACK_VALIDATION=n
+CONFIG_DEBUG_INFO=n
+CONFIG_KALLSYMS=y

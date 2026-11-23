@@ -1,0 +1,8 @@
+# /etc/inittab of the Linux4.1 guest.
+# tty1 is the VGA/framebuffer console that the app displays over VNC, ttyS0 is
+# the serial console used by the CI boot test.  Both give a root shell.
+::sysinit:/bin/sh /etc/linux41-init
+tty1::respawn:/sbin/getty -n -l /bin/sh 38400 tty1
+ttyS0::respawn:/sbin/getty -n -l /bin/sh 115200 ttyS0
+::ctrlaltdel:/sbin/reboot
+::shutdown:/bin/umount -a -r

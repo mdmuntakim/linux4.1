@@ -1,0 +1,14 @@
+out/
+build/
+.cache/
+app/.gradle/
+app/app/build/
+app/local.properties
+app/app/src/main/assets/kernel/
+app/app/src/main/assets/rootfs/
+app/app/src/main/assets/qemu/
+app/app/src/main/assets/version.txt
+app/app/src/main/jniLibs/
+*.apk
+*.img
+*.log

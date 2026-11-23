@@ -1,0 +1,255 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (empty = build only, no release)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JOBS: 4
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  guest:
+    name: kernel 4.1.52 + Alpine rootfs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc flex bison libssl-dev \
+            xz-utils e2fsprogs curl ca-certificates
+      - name: Build kernel and rootfs
+        run: |
+          bash scripts/build-kernel.sh
+          bash scripts/build-rootfs.sh
+      - name: Report
+        run: |
+          echo "kernel: $(stat -c%s out/bzImage) bytes"
+          echo "rootfs: $(stat -c%s out/rootfs.img) bytes"
+          grep -E 'CONFIG_EXT4_FS=|CONFIG_VIRTIO_BLK=|CONFIG_DRM_BOCHS=' out/kernel.config
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guest
+          path: |
+            out/bzImage
+            out/kernel.config
+            out/rootfs.img
+            out/data.img
+          if-no-files-found: error
+
+  qemu-android:
+    name: QEMU 5.0.0 static aarch64
+    runs-on: ubuntu-22.04
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable arm64 container emulation
+        run: docker run --privileged --rm tonistiigi/binfmt --install arm64
+      - name: Build QEMU for Android arm64
+        timeout-minutes: 285
+        run: bash scripts/build-qemu-android.sh
+      - name: Report
+        run: |
+          file out/qemu-android/libqemu-system-x86_64.so
+          echo "qemu: $(stat -c%s out/qemu-android/libqemu-system-x86_64.so) bytes"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qemu-android
+          path: out/qemu-android
+          if-no-files-found: error
+
+  qemu-host:
+    name: QEMU 5.0.0 host (boot test)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libglib2.0-dev \
+            libpixman-1-dev zlib1g-dev python3 xz-utils curl ca-certificates
+      - name: Build QEMU for the runner
+        run: bash scripts/build-qemu-host.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qemu-host
+          path: out/qemu-host
+          if-no-files-found: error
+
+  apk:
+    name: signed APK (arm64-v8a)
+    needs: [guest, qemu-android]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: guest
+          path: out
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: qemu-android
+          path: out
+          merge-multiple: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Build and sign
+        run: |
+          chmod +x app/gradlew scripts/*.sh
+          bash scripts/build-apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: out/Linux4.1-arm64.apk
+          if-no-files-found: error
+
+  boot-test:
+    name: boot test in QEMU (x86_64 runner)
+    needs: [guest, qemu-host]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: guest
+          path: out
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: qemu-host
+          path: out
+          merge-multiple: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Boot and measure
+        timeout-minutes: 15
+        run: bash scripts/boot-test.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results
+          path: |
+            out/test-results.json
+            out/serial-boot.log
+            out/qemu-stdout.log
+            out/screenshots
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: [apk, boot-test]
+    if: github.event_name == 'workflow_dispatch' && inputs.tag != '' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: apk
+          path: out
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results
+          path: out
+          merge-multiple: true
+      - name: Source archives and checksums
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag }}"
+          [ -n "$TAG" ] || TAG="${GITHUB_REF_NAME}"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          git archive --format=tar.gz --prefix="Linux4.1-${TAG}/" \
+            -o "out/Linux4.1-${TAG}-source.tar.gz" HEAD
+          cp .cache/linux-4.1.52.tar.xz "out/linux-4.1.52.tar.xz" 2>/dev/null || true
+          cp .cache/qemu-5.0.0.tar.xz "out/qemu-5.0.0.tar.xz" 2>/dev/null || true
+          # The pinned upstream sources are downloaded here when the cache is empty.
+          [ -f "out/linux-4.1.52.tar.xz" ] || \
+            curl -fL --retry 3 -o "out/linux-4.1.52.tar.xz" \
+              https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.1.52.tar.xz
+          [ -f "out/qemu-5.0.0.tar.xz" ] || \
+            curl -fL --retry 3 -o "out/qemu-5.0.0.tar.xz" \
+              https://download.qemu.org/qemu-5.0.0.tar.xz
+          ( cd out && sha256sum Linux4.1-arm64.apk "Linux4.1-${TAG}-source.tar.gz" \
+              linux-4.1.52.tar.xz qemu-5.0.0.tar.xz screenshots/*.png > SHA256SUMS.txt )
+          cat out/SHA256SUMS.txt
+      - name: Compose notes
+        run: |
+          python3 - <<'EOF'
+          import json, os
+          r = json.load(open('out/test-results.json'))
+          apk = os.path.getsize('out/Linux4.1-arm64.apk')
+          notes = f"""Linux4.1 {os.environ['TAG']} - a genuine Linux 4.1.52 kernel in an on-device QEMU VM.
+
+          Kernel: upstream linux-4.1.52 (kernel.org), built from the pinned tarball
+          with the documented guest defconfig.  Userspace: Alpine 3.20.0 minirootfs
+          (BusyBox + musl + apk + e2fsprogs), ext4 image.  Emulator: QEMU 5.0.0,
+          x86_64 guest, TCG multi-threaded, built statically for Android arm64.
+
+          Assumption: "Linux 4.1" is the kernel series; there is no original
+          Linux 4.1 distribution.  The rootfs is Alpine, not a distro claiming to
+          be Linux 4.1.
+
+          Measured in CI (x86_64 runner, QEMU 5.0.0 TCG):
+          - kernel in guest: {r['kernel']} (uname -r)
+          - boot to shell: {r['boot_seconds']} s
+          - console frame rate delivered over RFB: {r['fps']} fps
+          - keyboard-to-framebuffer latency (median of {len(r['input_latency_samples_ms'])}): {r['input_latency_median_ms']} ms
+          - framebuffer: {r['framebuffer']}
+          - persistent /data disk mounted: {r['data_disk_mounted']}
+
+          APK: {apk} bytes, arm64-v8a only, signed with the project key.
+
+          Not tested (reported honestly, not passed): install and boot on a real
+          Android arm64 device or Android emulator.  The arm64 APK was built and
+          signed in CI but could not be executed on the x86_64 runner.
+
+          GPL: complete corresponding source is attached (Linux 4.1.52 and QEMU
+          5.0.0 upstream tarballs, this repository's archive, kernel config and
+          build scripts).  Written offer: the release assets are the source.
+          """
+          open('out/RELEASE_NOTES.md','w').write(notes)
+          EOF
+          cat out/RELEASE_NOTES.md
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Linux4.1 ${TAG}" \
+            --notes-file out/RELEASE_NOTES.md \
+            out/Linux4.1-arm64.apk \
+            "out/Linux4.1-${TAG}-source.tar.gz" \
+            out/linux-4.1.52.tar.xz \
+            out/qemu-5.0.0.tar.xz \
+            out/SHA256SUMS.txt \
+            out/screenshots/boot-console.png \
+            out/screenshots/kernel-log.png

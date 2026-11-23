@@ -1,0 +1,29 @@
+Linux4.1 - GPL source notice
+============================
+
+Linux4.1 combines GPLv2 software:
+
+- Linux 4.1.52, Copyright (C) Linus Torvalds and contributors.
+  Upstream source: https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.1.52.tar.xz
+  SHA-256: 6ad9389e55e0ea57768eae173747058a4487fa3630e10a7999cfec9f945e559c
+
+- QEMU 5.0.0, Copyright (C) Fabrice Bellard and contributors.
+  Upstream source: https://download.qemu.org/qemu-5.0.0.tar.xz
+  SHA-256: 2f13a92a0fa5c8b69ff0796b59b86b080bbb92ebad5d301a7724dd06b5e78cb6
+
+- Alpine Linux minirootfs 3.20.0 (musl, BusyBox and Alpine packages have their
+  own licences; the exact tarball is attached to every release).
+  Upstream source: https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/x86_64/alpine-minirootfs-3.20.0-x86_64.tar.gz
+  SHA-256: 602efda518516787c716320bd46a3f50e83a74bb749e55483c2f4a9c9f8b9a38
+
+The complete corresponding source for the binaries in a release is:
+
+1. the upstream Linux 4.1.52 tarball attached to the release,
+2. the upstream QEMU 5.0.0 tarball attached to the release,
+3. the Linux4.1 source archive attached to the release, which contains the
+   kernel configuration fragment, the rootfs build, the QEMU build flags and
+   the Android app.
+
+The build scripts reproduce the binaries from those tarballs.  This is the
+written offer of source under GPLv2 section 3.  The licences are in LICENSE
+(GPLv2) and in the upstream tarballs.

@@ -1,0 +1,13 @@
+
+  _   _                      _     _  _
+ | | (_)_ __  _   ___  __   | |  | || |
+ | | | | '_ \| | | \ \/ /   | |__| || |_
+ | | | | | | | |_| |>  <    |____|__   _|
+ |_| |_|_| |_|\__,_/_/\_\           |_|
+
+ Linux 4.1.52 guest on QEMU (TCG, multi-threaded)
+ x86_64 guest, virtio disk + user-mode networking
+
+ The disk under /data survives an app restart.
+ 'apk' is available for packages; 'udhcpc' brought eth0 up.
+ Type 'uname -r' to see the kernel series.
